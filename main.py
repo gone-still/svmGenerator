@@ -108,16 +108,15 @@ verbose = False
 modelPath = os.path.join(rootDir, "opencvImages", "androidWatch", "model", platform)
 
 # the class dictionary:
-classDictionary = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E", 5: "F", 6: "G", 7: "H", 8: "I", 9: "J", 10: "K", 11: "L",
-                   12: "O", 13: "R", 14: "S", 15: "DEATH"}
+classDictionary = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
 
 # SVM model flags:
 saveModel = True
 loadModel = False
 
-# Data set infO:
+# Data set info:
 totalClasses = len(classDictionary)
-trainSamples = 60
+trainSamples = 10
 testSamples = 8
 
 # Processing image size:
