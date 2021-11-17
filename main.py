@@ -175,46 +175,22 @@ if not loadModel:
 
     print("Creating SVM from scratch...")
 
+    # Create the SVM:
     SVM = cv2.ml.SVM_create()
-    # SVM.setKernel(cv2.ml.SVM_LINEAR)
-    # SVM.setType(cv2.ml.SVM_C_SVC)
-    # SVM.setC(2.67)
-    # SVM.setGamma(5.55)
 
     # Android:
-    SVM.setKernel(cv2.ml.SVM_LINEAR)
-    SVM.setType(cv2.ml.SVM_NU_SVC)
-    SVM.setNu(0.01)
-    SVM.setC(2.67)
-    SVM.setGamma(5.55)
+    SVM.setKernel(cv2.ml.SVM_LINEAR)    # Sets the SVM kernel, this is a linear kernel
+    SVM.setType(cv2.ml.SVM_NU_SVC)      # Sets the SVM type, this is a "Smooth" Classifier
+    SVM.setNu(0.01)                     # Sets the "smoothness" of the decision boundary, values: [0.0 - 1.0]
 
-    # SVM.setKernel(cv2.ml.SVM_LINEAR)
-    # SVM.setType(cv2.ml.SVM_NU_SVC)
-    # SVM.setNu(0.05)
-    # SVM.setC(2.67)
-    # SVM.setGamma(5.55)
+    # Windows:
+    # SVM.setKernel(cv2.ml.SVM_POLY)        # Sets the SVM kernel, this a polynomial kernel
+    # SVM.setType(cv2.ml.SVM_C_SVC)         # Again, a smooth classifier
+    # SVM.setDegree(1.56)                   # Sets the polynomial degree, values: [>0.0]
+    # SVM.setCoef0(1.5)                     # Sets the polynomial coef, values: [real]
+    # SVM.setGamma(5.5)                     # Sets the polynomial parameter gamma, values: [>0.0]
+    # SVM.setNu(0.10)                       # Sets the decision boundary smoothness, values: [0.0 - 1.0]
 
-    # SVM.setC(3.5)
-    # SVM.setGamma(5.5)
-    # SVM.setC(2.67)
-    # SVM.setGamma(5.5)
-    # SVM.setCoef0(5.5)
-    # SVM.setNu(0.7)
-
-    # Windows
-    # SVM.setKernel(cv2.ml.SVM_POLY)
-    # SVM.setType(cv2.ml.SVM_C_SVC)
-    # SVM.setDegree(1.56)
-    # SVM.setCoef0(1.5)
-
-    # SVM.setKernel(cv2.ml.SVM_LINEAR)
-    # SVM.setType(cv2.ml.SVM_NU_SVC)
-    # SVM.setNu(0.7)
-
-    # SVM.setKernel(cv2.ml.SVM_LINEAR)
-    # SVM.setType(cv2.ml.SVM_C_SVC)
-    # SVM.setC(2.0)
-    # SVM.setGamma(5.5)
 
     SVM.setTermCriteria((cv2.TERM_CRITERIA_COUNT, 25, 1.e-01))
     SVM.train(train, cv2.ml.ROW_SAMPLE, train_labels)
