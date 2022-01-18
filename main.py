@@ -1,5 +1,10 @@
-# SVM tutorial 1 (OpenCV 4.5.4): https://docs.opencv.org/4.5.4/d1/d73/tutorial_introduction_to_svm.html
-# SVM tutorial 2 (2017): https://learnopencv.com/handwritten-digits-classification-an-opencv-c-python-tutorial/
+# File        :   main.py (SVM Generator)
+# Version     :   1.1.1
+# Description :   Scrip that trains, tests and generates a SVM-based per-letter
+#                 model using drawn samples. For use with "Android Watch".           :
+# Date:       :   Jan 17, 2022
+# Author      :   Ricardo Acevedo-Avila (racevedoaa@gmail.com)
+# License     :   MIT
 
 import numpy as np
 import cv2
@@ -44,10 +49,11 @@ def prepareDataset(datasetData, datasetPath, mode, verbose):
             # create path and read image:
             imagePath = os.path.join(currentPath, currentImage)
 
-            # Read image:
+            # Read image as grayscale:
             inputImage = cv2.imread(imagePath, cv2.IMREAD_GRAYSCALE)
 
             # Invert image:
+            # 0 (Black) - Noise, 255 (White) - Shape to analyze
             inputImage = 255 - inputImage
 
             if verbose:
@@ -55,13 +61,21 @@ def prepareDataset(datasetData, datasetPath, mode, verbose):
 
             # Set the resizing parameters:
             (imageHeight, imageWidth) = inputImage.shape[:2]
+
+            # Get the resized parameters:
             aspectRatio = imageHeight / imageWidth
             rescaledWidth = cellWidth
             rescaledHeight = int(rescaledWidth * aspectRatio)
-            newSize = (rescaledWidth, rescaledHeight)
 
-            # resize image
-            inputImage = cv2.resize(inputImage, newSize, interpolation=cv2.INTER_NEAREST)
+            # Resize, if necessary:
+            if (imageHeight != rescaledWidth) or (imageWidth != rescaledWidth):
+                if verbose:
+                    print("prepareDataset>> Resizing sample from: " + str(imageWidth) + " x " + str(imageHeight)
+                          + " to: " + str(rescaledWidth) + " x " + str(rescaledHeight))
+                # Set new size:
+                newSize = (rescaledWidth, rescaledHeight)
+                # resize image
+                inputImage = cv2.resize(inputImage, newSize, interpolation=cv2.INTER_NEAREST)
 
             if verbose:
                 showImage("Image Resized", inputImage)
@@ -107,8 +121,8 @@ verbose = False
 # Model output directory:
 modelPath = os.path.join(rootDir, "opencvImages", "androidWatch", "model", platform)
 
-# the class dictionary:
-classDictionary = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E"}
+# * the class dictionary:
+classDictionary = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E", 5: "F"}
 
 # SVM model flags:
 saveModel = True
@@ -116,6 +130,7 @@ loadModel = False
 
 # Data set info:
 totalClasses = len(classDictionary)
+# * Number of samples that the script reads for training and testing
 trainSamples = 10
 testSamples = 8
 
@@ -179,18 +194,18 @@ if not loadModel:
     SVM = cv2.ml.SVM_create()
 
     # Android:
-    SVM.setKernel(cv2.ml.SVM_LINEAR)    # Sets the SVM kernel, this is a linear kernel
-    SVM.setType(cv2.ml.SVM_NU_SVC)      # Sets the SVM type, this is a "Smooth" Classifier
-    SVM.setNu(0.01)                     # Sets the "smoothness" of the decision boundary, values: [0.0 - 1.0]
+    SVM.setKernel(cv2.ml.SVM_LINEAR)  # Sets the SVM kernel, this is a linear kernel
+    SVM.setType(cv2.ml.SVM_NU_SVC)  # Sets the SVM type, this is a "Smooth" Classifier
+    SVM.setNu(0.01)  # Sets the "smoothness" of the decision boundary, values: [0.0 - 1.0]
 
     # Windows:
     # SVM.setKernel(cv2.ml.SVM_POLY)        # Sets the SVM kernel, this a polynomial kernel
     # SVM.setType(cv2.ml.SVM_C_SVC)         # Again, a smooth classifier
-    # SVM.setDegree(1.56)                   # Sets the polynomial degree, values: [>0.0]
+    # SVM.setDegree(1.56)
+    # Sets the polynomial degree, values: [>0.0]
     # SVM.setCoef0(1.5)                     # Sets the polynomial coef, values: [real]
     # SVM.setGamma(5.5)                     # Sets the polynomial parameter gamma, values: [>0.0]
     # SVM.setNu(0.10)                       # Sets the decision boundary smoothness, values: [0.0 - 1.0]
-
 
     SVM.setTermCriteria((cv2.TERM_CRITERIA_COUNT, 25, 1.e-01))
     SVM.train(train, cv2.ml.ROW_SAMPLE, train_labels)
