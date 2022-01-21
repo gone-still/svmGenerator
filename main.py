@@ -1,8 +1,8 @@
 # File        :   main.py (SVM Generator)
-# Version     :   1.1.1
+# Version     :   1.2.0
 # Description :   Scrip that trains, tests and generates a SVM-based per-letter
 #                 model using drawn samples. For use with "Android Watch".           :
-# Date:       :   Jan 17, 2022
+# Date:       :   Jan 20, 2022
 # Author      :   Ricardo Acevedo-Avila (racevedoaa@gmail.com)
 # License     :   MIT
 
@@ -23,6 +23,164 @@ def writeImage(imagePath, inputImage):
     imagePath = imagePath + ".png"
     cv2.imwrite(imagePath, inputImage, [cv2.IMWRITE_PNG_COMPRESSION, 0])
     print("Wrote Image: " + imagePath)
+
+
+# Function that fills corners of a square image:
+# ( cv::Mat &inputImage, int fillColor = 255, int fillOffsetX = 10, int fillOffsetY = 10, cv::Scalar fillTolerance = 4 )
+def fillCorners(binaryImage, fillColor=255, fillOffsetX=10, fillOffsetY=10):
+    # Get image dimensions:
+    (imageHeight, imageWidth) = binaryImage.shape[:2]
+    # Flood-fill corners:
+    for j in range(2):
+        # Compute y coordinate:
+        fillY = int(imageHeight * j + (-2 * j + 1) * fillOffsetY)
+        for i in range(2):
+            # Compute x coordinate:
+            fillX = int(imageWidth * i + (-2 * i + 1) * fillOffsetX)
+            # Flood-fill the image:
+            cv2.floodFill(binaryImage, mask=None, seedPoint=(fillX, fillY), newVal=(fillColor))
+            # print("X: " + str(fillX) + ", Y: " + str(fillY))
+            # showImage("Flood-Fill", binaryImage)
+
+    return binaryImage
+
+
+# Gets the bounding box of a blob via horizontal and
+# Vertical projections, crop the blob and returns it:
+
+def getCharacterBlob(binaryImage, verbose=False):
+    # Set number of reductions (dimensions):
+    dimensions = 2
+    # Store the data of the final bounding boxes here,
+    # 4 elements cause the list is [x,y,w,h]
+    boundingRect = [None] * 4
+
+    # Reduce the image:
+    for i in range(dimensions):
+        # Reduce image, first horizontal, then vertical:
+        reducedImg = cv2.reduce(binaryImage, i, cv2.REDUCE_MAX)
+        # showImage("Reduced Image: " + str(i), reducedImg)
+
+        # Get contours, inspect bounding boxes and
+        # get the starting (smallest) X and ending (largest) X
+
+        # Find the contours on the binary image:
+        contours, hierarchy = cv2.findContours(reducedImg, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Create temporal list to store the rectangle data:
+        tempRect = []
+
+        # Get the largest contour in the contours list:
+        for j, c in enumerate(contours):
+            currentRectangle = cv2.boundingRect(c)
+
+            # Get the dimensions of the bounding rect:
+            rectX = currentRectangle[0]
+            rectY = currentRectangle[1]
+            rectWidth = currentRectangle[2]
+            rectHeight = currentRectangle[3]
+            # print("Dimension: " + str(i) + " x: " + str(rectX) + " y: " + str(rectY) + " w: " + str(
+            #    rectWidth) + " h: " + str(rectHeight))
+
+            if i == 0:
+                # Horizontal dimension, check Xs:
+                tempRect.append(rectX)
+                tempRect.append(rectX + rectWidth)
+            else:
+                # Vertical dimension, check Ys:
+                tempRect.append(rectY)
+                tempRect.append(rectY + rectHeight)
+
+        # Extract the smallest and largest coordinates:
+        # print(tempRect)
+        currentMin = min(tempRect)
+        currentMax = max(tempRect)
+        # print("Dimension: " + str(i) + " Start X: " + str(currentMin) + ", End X: " + str(currentMax))
+        # Store into bounding rect list as [x,y,w,h]:
+        boundingRect[i] = currentMin
+        boundingRect[i + 2] = currentMax - currentMin
+        # print(boundingRect)
+
+    if verbose:
+        print("getCharacterBlob>> Bounding box computed, dimensions as [x,y,w,h] follow: ")
+        print(boundingRect)
+
+    # Check out bounding box:
+    if verbose:
+        binaryImageColor = cv2.cvtColor(binaryImage, cv2.COLOR_GRAY2BGR)
+        color = (0, 0, 255)
+        cv2.rectangle(binaryImageColor, (int(boundingRect[0]), int(boundingRect[1])),
+                      (int(boundingRect[0] + boundingRect[2]), int(boundingRect[1] + boundingRect[3])), color, 2)
+        showImage("BBox", binaryImageColor)
+
+    # Crop the character blob:
+    cropX = boundingRect[0]
+    cropY = boundingRect[1]
+    cropWidth = boundingRect[2]
+    cropHeight = boundingRect[3]
+
+    # Crop the image via Numpy Slicing:
+    croppedImage = binaryImage[cropY:cropY + cropHeight, cropX:cropX + cropWidth]
+
+    if verbose:
+        print("getCharacterBlob>> Cropped image using bounding box data. ")
+
+    return croppedImage
+
+
+# Process the image before feeding it to the classifier
+def processSample(inputImage, verbose=False):
+    # Get height and width:
+    (inputImageHeight, inputImageWidth) = inputImage.shape[:2]
+
+    # Fill the corners with canvas image
+    # inputImage = fillCorners(inputImage, fillOffsetX=5, fillOffsetY=5, fillColor=(255, 255, 255))
+    # showImage("inputImage [FF]", inputImage)
+
+    # Threshold the image, canvas color (192) = black, line color (0) = white
+    # _, binaryImage = cv2.threshold(inputImage, 1, 255, cv2.THRESH_BINARY_INV)
+    binaryImage = inputImage
+    # showImage("Binary Image", binaryImage)
+
+    # Get character bounding box via projections and crop it:
+    if verbose:
+        print("postProcessSample>> Extracting character blob...")
+
+    characterBlob = getCharacterBlob(binaryImage)
+    # showImage("characterBlob", characterBlob)
+
+    # Create target canvas with the smallest original dimension:
+    largestDimension = min((inputImageHeight, inputImageWidth))
+
+    if verbose:
+        print("postProcessSample>> Largest Dimension: " + str(largestDimension))
+        print("postProcessSample>> Creating canvas of: " + str(largestDimension) + " x " + str(largestDimension))
+
+    characterCanvas = np.zeros((largestDimension, largestDimension), np.uint8)
+    # showImage("characterCanvas", characterCanvas)
+
+    # Get canvas centroid (it is a square):
+    canvasX = 0.5 * largestDimension
+    canvasY = canvasX
+
+    # Get character centroid:
+    (blobHeight, blobWidth) = characterBlob.shape[:2]
+
+    # Get paste x and y:
+    pasteX = int(canvasX - 0.5 * blobWidth)
+    pasteY = int(canvasY - 0.5 * blobHeight)
+
+    if verbose:
+        print("postProcessSample>> Pasting at X: " + str(pasteX) + " ,Y: " + str(pasteY) + " W: " + str(
+            blobWidth) + ", H: " + str(blobHeight))
+
+    # Paste character blob into new canvas:
+    characterCanvas[pasteY:pasteY + blobHeight, pasteX:pasteX + blobWidth] = characterBlob
+    # Invert image:
+    characterCanvas = 255 - characterCanvas
+    # showImage("Pasted Image", characterCanvas)
+
+    return characterCanvas
 
 
 # Pre-processes the data base:
@@ -52,9 +210,12 @@ def prepareDataset(datasetData, datasetPath, mode, verbose):
             # Read image as grayscale:
             inputImage = cv2.imread(imagePath, cv2.IMREAD_GRAYSCALE)
 
-            # Invert image:
-            # 0 (Black) - Noise, 255 (White) - Shape to analyze
-            inputImage = 255 - inputImage
+            if verbose:
+                showImage("Image: " + str(sampleCounter), inputImage)
+
+            # Center blob
+            # Output image is binary: 0 (Black) - Noise, 255 (White) - Shape to analyze
+            inputImage = processSample(inputImage)
 
             if verbose:
                 showImage("Image: " + str(sampleCounter), inputImage)
@@ -122,7 +283,9 @@ verbose = False
 modelPath = os.path.join(rootDir, "opencvImages", "androidWatch", "model", platform)
 
 # * the class dictionary:
-classDictionary = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E", 5: "F"}
+classDictionary = {0: "A", 1: "B", 2: "C", 3: "D", 4: "E", 5: "F", 6: "G", 7: "H", 8: "I", 9: "J",
+                   10: "K", 11: "L", 12: "M", 13: "N", 14: "O", 15: "P", 16: "Q", 17: "R", 18: "S", 19: "T",
+                   20: "U", 21: "V", 22: "W", 23: "X", 24: "Y", 25: "Z"}
 
 # SVM model flags:
 saveModel = True
@@ -131,8 +294,8 @@ loadModel = False
 # Data set info:
 totalClasses = len(classDictionary)
 # * Number of samples that the script reads for training and testing
-trainSamples = 10
-testSamples = 8
+trainSamples = 40
+testSamples = 10
 
 # Processing image size:
 cellHeight = 100
@@ -196,7 +359,7 @@ if not loadModel:
     # Android:
     SVM.setKernel(cv2.ml.SVM_LINEAR)  # Sets the SVM kernel, this is a linear kernel
     SVM.setType(cv2.ml.SVM_NU_SVC)  # Sets the SVM type, this is a "Smooth" Classifier
-    SVM.setNu(0.01)  # Sets the "smoothness" of the decision boundary, values: [0.0 - 1.0]
+    SVM.setNu(0.10)  # Sets the "smoothness" of the decision boundary, values: [0.0 - 1.0]
 
     # Windows:
     # SVM.setKernel(cv2.ml.SVM_POLY)        # Sets the SVM kernel, this a polynomial kernel
