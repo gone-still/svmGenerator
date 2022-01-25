@@ -1,7 +1,7 @@
 # File        :   main.py (SVM Generator)
 # Version     :   1.2.0
 # Description :   Script that trains, tests and generates a SVM-based per-letter
-#                 model using drawn samples. For use with "Android Watch".           :
+#                 model using drawn samples. For use with "Android Watch".
 # Date:       :   Jan 20, 2022
 # Author      :   Ricardo Acevedo-Avila (racevedoaa@gmail.com)
 # License     :   MIT
