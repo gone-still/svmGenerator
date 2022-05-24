@@ -1,8 +1,8 @@
 # File        :   main.py (SVM Generator)
-# Version     :   1.2.0
+# Version     :   1.3.0
 # Description :   Scrip that trains, tests and generates a SVM-based per-letter
 #                 model using drawn samples. For use with "Android Watch".           :
-# Date:       :   Jan 20, 2022
+# Date:       :   May 23, 2022
 # Author      :   Ricardo Acevedo-Avila (racevedoaa@gmail.com)
 # License     :   MIT
 
@@ -267,7 +267,7 @@ def prepareDataset(datasetData, datasetPath, mode, verbose):
 
 
 # samples path:
-platform = "android"
+platform = "win"
 rootDir = "D:"
 path = os.path.join(rootDir, "opencvImages", "androidWatch", "samples", platform)
 
@@ -294,8 +294,8 @@ loadModel = False
 # Data set info:
 totalClasses = len(classDictionary)
 # * Number of samples that the script reads for training and testing
-trainSamples = 40
-testSamples = 10
+trainSamples = 25
+testSamples = 5
 
 # Processing image size:
 cellHeight = 100
@@ -356,19 +356,26 @@ if not loadModel:
     # Create the SVM:
     SVM = cv2.ml.SVM_create()
 
-    # Android:
-    SVM.setKernel(cv2.ml.SVM_LINEAR)  # Sets the SVM kernel, this is a linear kernel
-    SVM.setType(cv2.ml.SVM_NU_SVC)  # Sets the SVM type, this is a "Smooth" Classifier
-    SVM.setNu(0.10)  # Sets the "smoothness" of the decision boundary, values: [0.0 - 1.0]
+    # Check platform:
+    if platform == "android":
+        # Android:
+        print("Creating SVM with Android settings...")
+        SVM.setKernel(cv2.ml.SVM_LINEAR)  # Sets the SVM kernel, this is a linear kernel
+        SVM.setType(cv2.ml.SVM_NU_SVC)  # Sets the SVM type, this is a "Smooth" Classifier
+        SVM.setNu(0.10)  # Sets the "smoothness" of the decision boundary, values: [0.0 - 1.0]
+    else:
+        # Windows:
+        print("Creating SVM with Windows settings...")
+        SVM.setKernel(cv2.ml.SVM_POLY)        # Sets the SVM kernel, this a polynomial kernel
+        SVM.setType(cv2.ml.SVM_C_SVC)         # Again, a smooth classifier
+        SVM.setDegree(2)                      # Sets the polynomial degree, values: [>0.0]
+        SVM.setCoef0(2.0)                     # Sets the polynomial coef, values: [real]
+        SVM.setGamma(2.0)                     # Sets the polynomial parameter gamma, values: [>0.0]
+        SVM.setNu(0.25)                       # Sets the decision boundary smoothness, values: [0.0 - 1.0]
 
-    # Windows:
-    # SVM.setKernel(cv2.ml.SVM_POLY)        # Sets the SVM kernel, this a polynomial kernel
-    # SVM.setType(cv2.ml.SVM_C_SVC)         # Again, a smooth classifier
-    # SVM.setDegree(1.56)
-    # Sets the polynomial degree, values: [>0.0]
-    # SVM.setCoef0(1.5)                     # Sets the polynomial coef, values: [real]
-    # SVM.setGamma(5.5)                     # Sets the polynomial parameter gamma, values: [>0.0]
-    # SVM.setNu(0.10)                       # Sets the decision boundary smoothness, values: [0.0 - 1.0]
+        # SVM.setKernel(cv2.ml.SVM_LINEAR)  # Sets the SVM kernel, this is a linear kernel
+        # SVM.setType(cv2.ml.SVM_NU_SVC)  # Sets the SVM type, this is a "Smooth" Classifier
+        # SVM.setNu(0.255)  # Sets the "smoothness" of the decision boundary, values: [0.0 - 1.0]
 
     SVM.setTermCriteria((cv2.TERM_CRITERIA_COUNT, 25, 1.e-01))
     SVM.train(train, cv2.ml.ROW_SAMPLE, train_labels)
